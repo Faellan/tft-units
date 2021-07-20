@@ -51,10 +51,15 @@ class Fiddlesticks(Unit):
             3: 5
         }[max(1, self.star_level)]
 
-    def perform_spell(self, map, time):
-        self.next_tick_at = time + 0.01
+    # on cast instead of perform to tp under revive
+    def cast_spell(self, map, time):
+        super().cast_spell(map, time)
+        self.next_tick_at = time + self.cast_time
         self.ticks_remaining = self.get_crowstorm_base_duration()  # TODO: +/- 1 ?
         self.is_first_tick = True
+
+    def perform_spell(self, map, time):
+        pass  # nothing to do
 
     def crowstorm_tp(self, map, time):
         best_row, best_col, best_score = None, None, None
@@ -80,9 +85,9 @@ class Fiddlesticks(Unit):
                 self.crowstorm_tp(map, time)
                 self.is_first_tick = False
             self.ticks_remaining -= 1
-            self.next_tick_at += 1.0
-            for unit in map.units:
-                if unit.team != self.team and unit.distance(self.row, self.col) <= self.spell_range:
+            self.next_tick_at = time + 1
+            for unit in self.enemies(map):
+                if unit.distance(self.row, self.col) <= self.spell_range:
                     self.deal_magic_damage(unit, self.get_crowstorm_damage(), is_multitarget=True)
         if self.ticks_remaining:
             self.mana_locked_until = self.next_tick_at
