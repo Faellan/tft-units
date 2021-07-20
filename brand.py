@@ -48,17 +48,30 @@ class Brand(Unit):
             3: 0.7
         }[max(1, self.star_level)]
 
-    def perform_spell(self, map, time):
-        if not self.current_target:
+    def perform_spell(self, board, time):
+        targets_without_sear = [
+            u for u in self.targetable_enemies(board)
+            if not any([isinstance(dot, Sear) for dot in u.dots])
+        ]
+        targets = targets_without_sear if targets_without_sear else self.targetable_enemies(board)
+        if not targets:
             return
-        self.current_target.magic_resist_shred_percentage_modifiers.add_component(self.uuid, time, 12, self.get_sear_shred_ratio())
-        self.current_target.dots.append(
-            Sear(
-                owner=self,
-                unit=self.current_target,
-                time=time,
-                trigger_delay=1,
-                trigger_duration=12,
-                damage_per_tick=self.get_sear_total_damage()/12
+
+        target = sorted(targets, key=lambda u: u.distance(self.row, self.col))[0]
+        target.magic_resist_shred_percentage_modifiers.add_component(self.uuid, time, 12, self.get_sear_shred_ratio())
+
+        for dot in target.dots:
+            if isinstance(dot, Sear):
+                dot.refresh(time)
+                break
+        else:
+            target.dots.append(
+                Sear(
+                    owner=self,
+                    unit=target,
+                    time=time,
+                    trigger_delay=1,
+                    trigger_duration=12,
+                    damage_per_tick=self.get_sear_total_damage()/12
+                )
             )
-        )
